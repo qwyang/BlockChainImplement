@@ -61,3 +61,11 @@ func (pow *ProofOfWork) mining() (int64, [32]byte) {
 	}
 	return nonce, hash
 }
+
+func (pow *ProofOfWork) IsValid() bool {
+	data := pow.prepareData(pow.block.Nonce)
+	hash := sha256.Sum256(data)
+	var hashInt big.Int
+	hashInt.SetBytes(hash[:])
+	return hashInt.Cmp(pow.targetHash) == -1
+}

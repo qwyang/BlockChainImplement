@@ -16,5 +16,7 @@ func main() {
 		fmt.Printf("TargetBits:0x%x\n", block.TargetBits)
 		fmt.Printf("Nonce:%d\n", block.Nonce)
 		fmt.Printf("MerkleRoot:0x%x\n", block.MerkleRoot)
+		pow := NewPow(block)
+		fmt.Printf("isValid:%v\n", pow.IsValid())
 	}
 }

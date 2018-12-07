@@ -15,6 +15,11 @@ type Block struct {
 	Data          []byte
 }
 
+func NewGenesisBlock() *Block {
+	block := NewBlock("Genesis Block", []byte{})
+	return block
+}
+
 func NewBlock(data string, prevHash []byte) *Block {
 	block := Block{
 		Version:       1,

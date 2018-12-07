@@ -5,11 +5,6 @@ type BlockChain struct {
 	pow    *ProofOfWork
 }
 
-func NewGenesisBlock() *Block {
-	block := NewBlock("Genesis Block", []byte{})
-	return block
-}
-
 func NewBlockChain() *BlockChain {
 	block := NewGenesisBlock()
 	block.TargetBits = targetBits
@@ -18,7 +13,7 @@ func NewBlockChain() *BlockChain {
 	block.Nonce = nonce
 	block.Hash = hash[:]
 	return &BlockChain{
-		blocks: []*Block{NewGenesisBlock()},
+		blocks: []*Block{block},
 		pow:    pow,
 	}
 }

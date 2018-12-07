@@ -1,2 +1,5 @@
 *.exe
 .idea/
+bitcoin
+pkg
+src/github.com/boltdb

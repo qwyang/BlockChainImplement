@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/gob"
 	"time"
 )
 
@@ -34,4 +36,20 @@ func NewBlock(data string, prevHash []byte) *Block {
 	block.Nonce = nonce
 	block.Hash = hash[:]
 	return &block
+}
+
+func (b *Block)Serialize()[]byte{
+	buffer := bytes.Buffer{}
+	enc := gob.NewEncoder(&buffer)
+	err := enc.Encode(b)
+	CheckError("Block.Serialize",err)
+	return buffer.Bytes()
+}
+
+func Deserialize(data []byte) *Block {
+	var b Block
+	dec := gob.NewDecoder(bytes.NewReader(data))
+	err := dec.Decode(&b)
+	CheckError("Deserialize",err)
+	return &b
 }

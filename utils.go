@@ -17,9 +17,9 @@ func IntToBytes(d int64)[]byte{
 	return buffer.Bytes()
 }
 
-func CheckError(err error){
+func CheckError(data string,err error){
 	if err!=nil {
-		fmt.Printf("error:%v",err)
+		fmt.Printf("error:%v,%v",data,err)
 		os.Exit(-1)
 	}
 }

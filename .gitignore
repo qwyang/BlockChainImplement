@@ -2,4 +2,6 @@
 .idea/
 bitcoin
 pkg
+*.db
+*.db.lock
 src/github.com/boltdb

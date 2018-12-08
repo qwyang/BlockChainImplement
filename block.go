@@ -25,9 +25,13 @@ func NewBlock(data string, prevHash []byte) *Block {
 		Version:       1,
 		PrevBlockHash: prevHash,
 		TimeStamp:     time.Now().Unix(),
-		TargetBits:    10,
+		TargetBits:    targetBits,
 		Nonce:         0,
 		Data:          []byte(data),
 	}
+	pow := NewPow(&block)
+	nonce,hash := pow.mining()
+	block.Nonce = nonce
+	block.Hash = hash[:]
 	return &block
 }

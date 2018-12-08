@@ -17,16 +17,12 @@ type ProofOfWork struct {
 
 func NewPow(b *Block) *ProofOfWork {
 	tmp := big.NewInt(1)
-	hashValue := tmp.Lsh(tmp, 256-targetBits)
+	hashValue := tmp.Lsh(tmp, uint(256 - b.TargetBits))
 	pow := ProofOfWork{
 		b,
 		hashValue,
 	}
 	return &pow
-}
-
-func (pow *ProofOfWork) SetBlock(b *Block) {
-	pow.block = b
 }
 
 func (pow *ProofOfWork) prepareData(nonce int64) []byte {

@@ -1,7 +1,6 @@
 package main
 
 func main() {
-	bc := NewBlockChain()
-	cli := NewCLI(bc)
+	cli := NewCLI()
 	cli.run()
 }

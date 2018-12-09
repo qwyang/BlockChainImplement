@@ -26,36 +26,25 @@ func NewBlockChain() *BlockChain {
 	var lastHash []byte
 	db,err := bolt.Open(DataBaseFile,0600,nil)
 	CheckError("NewBlockChain #1",err)
-	err = db.Update(func(tx *bolt.Tx) error {
+	err = db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketName))
-		if bucket != nil{
-			lastHash = bucket.Get([]byte(lastHashKey))
-		} else {
-			block := NewGenesisBlock()
-			bucket, err = tx.CreateBucket([]byte(bucketName))
-			if err != nil {
-				return err
-			}
-			err = bucket.Put([]byte(lastHashKey), block.Hash)
-			if err != nil {
-				return err
-			}
-			err = bucket.Put([]byte(block.Hash), block.Serialize())
-			if err != nil {
-				return err
-			}
-			lastHash = block.Hash
+		if bucket == nil {
+			err := errors.New("Empty Database" )
+			CheckError("NewBlockChain #2",err)
+		}
+		lastHash = bucket.Get([]byte(lastHashKey))
+		if lastHash == nil {
+			err := errors.New("cannot find lasthashkey in db:" + string(lastHashKey))
+			CheckError("NewBlockChain #2",err)
 		}
 		return nil
 	})
-	CheckError("NewBlockChain #1",err)
-	return &BlockChain{
-		db,
-		lastHash,
-	}
+	CheckError("NewBlockChain #3",err)
+	return &BlockChain{db,lastHash}
 }
-func (bc *BlockChain) AddBlock(data string) {
-	block := NewBlock(data,bc.lastHash)
+
+func (bc *BlockChain) AddBlock(txs []Transaction) {
+	block := NewBlock(txs,bc.lastHash)
 	err := bc.db.Update(func(tx *bolt.Tx)error{
 		bucket := tx.Bucket([]byte(bucketName))
 		if bucket != nil {

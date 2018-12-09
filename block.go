@@ -14,22 +14,23 @@ type Block struct {
 	TargetBits    int64
 	Nonce         int64
 	MerkleRoot    []byte
-	Data          []byte
+	Transactions  []Transaction
 }
 
 func NewGenesisBlock() *Block {
-	block := NewBlock("Genesis Block", []byte{})
+	tx := NewTransaction("","",50)
+	block := NewBlock([]Transaction{*tx}, []byte{})
 	return block
 }
 
-func NewBlock(data string, prevHash []byte) *Block {
+func NewBlock(txs []Transaction, prevHash []byte) *Block {
 	block := Block{
 		Version:       1,
 		PrevBlockHash: prevHash,
 		TimeStamp:     time.Now().Unix(),
 		TargetBits:    targetBits,
 		Nonce:         0,
-		Data:          []byte(data),
+		Transactions:   txs,
 	}
 	pow := NewPow(&block)
 	nonce,hash := pow.mining()

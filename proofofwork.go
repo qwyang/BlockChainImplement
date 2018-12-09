@@ -35,7 +35,6 @@ func (pow *ProofOfWork) prepareData(nonce int64) []byte {
 			IntToBytes(block.TargetBits),
 			IntToBytes(nonce),
 			block.MerkleRoot,
-			block.Data,
 		}, []byte{})
 	return data
 }

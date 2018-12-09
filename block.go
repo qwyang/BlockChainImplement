@@ -14,16 +14,15 @@ type Block struct {
 	TargetBits    int64
 	Nonce         int64
 	MerkleRoot    []byte
-	Transactions  []Transaction
+	Transactions  []*Transaction
 }
 
-func NewGenesisBlock() *Block {
-	tx := NewTransaction("","",50)
-	block := NewBlock([]Transaction{*tx}, []byte{})
+func NewGenesisBlock(coinbase *Transaction) *Block {
+	block := NewBlock([]*Transaction{coinbase}, []byte{})
 	return block
 }
 
-func NewBlock(txs []Transaction, prevHash []byte) *Block {
+func NewBlock(txs []*Transaction, prevHash []byte) *Block {
 	block := Block{
 		Version:       1,
 		PrevBlockHash: prevHash,

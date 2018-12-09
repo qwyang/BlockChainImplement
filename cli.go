@@ -66,7 +66,8 @@ func (cli *CLI) NewChain(){
 		if bucket != nil{
 			lastHash = bucket.Get([]byte(lastHashKey))
 		} else {
-			block := NewGenesisBlock()
+			transx := NewCoinbaseTx("",GenesisBlockInfo)
+			block := NewGenesisBlock(transx)
 			bucket, err = tx.CreateBucket([]byte(bucketName))
 			if err != nil {
 				return err

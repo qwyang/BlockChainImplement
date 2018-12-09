@@ -6,6 +6,9 @@ import (
 	"encoding/gob"
 )
 
+const reward = 50
+const GenesisBlockInfo = "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks"
+
 type Input struct {
 	TxID []byte
 	Index int64
@@ -36,12 +39,28 @@ func (tx *Transaction) SetId(){
 	tx.ID = data[:]
 }
 
-func NewTransaction(from string,to string, value uint64) *Transaction{
+func NewCoinbaseTx(toAddress string,data string) *Transaction {
+	g_input := Input{
+		UnlockScripts:data,
+	}
+	g_output := Output{
+		Value:reward,
+	}
+	tx := Transaction{
+		[]byte{},
+		[]Input{g_input},
+		[]Output{g_output},
+	}
+	tx.SetId()
+	return &tx
+}
+
+func NewTransaction(fromAddress string,toAddress string, value float64) *Transaction{
 	g_input := Input{
 
 	}
 	g_output := Output{
-
+		Value:value,
 	}
 	tx := Transaction{
 		[]byte{},

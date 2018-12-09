@@ -43,7 +43,7 @@ func NewBlockChain() *BlockChain {
 	return &BlockChain{db,lastHash}
 }
 
-func (bc *BlockChain) AddBlock(txs []Transaction) {
+func (bc *BlockChain) AddBlock(txs []*Transaction) {
 	block := NewBlock(txs,bc.lastHash)
 	err := bc.db.Update(func(tx *bolt.Tx)error{
 		bucket := tx.Bucket([]byte(bucketName))

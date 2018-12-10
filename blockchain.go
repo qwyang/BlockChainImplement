@@ -22,24 +22,60 @@ type BlockChainIterator struct{
 	currentHash []byte
 }
 
+type UTXO struct {
+	tx *Transaction
+	indexes []int64
+}
+
 func NewBlockChain() *BlockChain {
 	var lastHash []byte
 	db,err := bolt.Open(DataBaseFile,0600,nil)
 	CheckError("NewBlockChain #1",err)
-	err = db.View(func(tx *bolt.Tx) error {
+	err = db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketName))
-		if bucket == nil {
-			err := errors.New("Empty Database" )
-			CheckError("NewBlockChain #2",err)
-		}
-		lastHash = bucket.Get([]byte(lastHashKey))
-		if lastHash == nil {
-			err := errors.New("cannot find lasthashkey in db:" + string(lastHashKey))
-			CheckError("NewBlockChain #2",err)
+		if bucket != nil{
+			lastHash = bucket.Get([]byte(lastHashKey))
+		} else {
+			transx := NewCoinbaseTx("",GenesisBlockInfo)
+			block := NewGenesisBlock(transx)
+			bucket, err = tx.CreateBucket([]byte(bucketName))
+			if err != nil {
+				return err
+			}
+			err = bucket.Put([]byte(lastHashKey), block.Hash)
+			if err != nil {
+				return err
+			}
+			err = bucket.Put([]byte(block.Hash), block.Serialize())
+			if err != nil {
+				return err
+			}
+			lastHash = block.Hash
 		}
 		return nil
 	})
 	CheckError("NewBlockChain #3",err)
+	return &BlockChain{db,lastHash}
+}
+
+func GetBlockChainHandler() *BlockChain {
+	var lastHash []byte
+	db,err := bolt.Open(DataBaseFile,0600,nil)
+	CheckError("GetBlockChainHandler #1",err)
+	err = db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(bucketName))
+		if bucket == nil {
+			err := errors.New("Empty Database" )
+			CheckError("GetBlockChainHandler #2",err)
+		}
+		lastHash = bucket.Get([]byte(lastHashKey))
+		if lastHash == nil {
+			err := errors.New("cannot find lasthashkey in db:" + string(lastHashKey))
+			CheckError("GetBlockChainHandler #2",err)
+		}
+		return nil
+	})
+	CheckError("GetBlockChainHandler #3",err)
 	return &BlockChain{db,lastHash}
 }
 
@@ -89,5 +125,47 @@ func (iter *BlockChainIterator) Next() *Block {
 		return nil
 	})
 	CheckError("BlockChainIterator.Next #2",err)
+
 	return block
+}
+
+func IsIn(set []int64,v int64) bool {
+	if set == nil {
+		return false
+	}
+	for _,x := range set {
+		if v == x {
+			return  true
+		}
+	}
+	return false
+}
+
+func (bc *BlockChain)GetUTXOs(address string) []UTXO{
+	utxo := []UTXO{}
+	spent := make(map[string][]int64)
+	iter := bc.Iterator()
+	for block := iter.Next();block != nil;block = iter.Next() {
+		for _, tx := range block.Transactions {
+			if !tx.IsCoinbase() { //CoinBase交易没有inputs,不统计
+				continue
+			}
+			for index, input := range tx.Inputs {//遍历每个普通交易的输入
+				if input.Unlock(address) {//属于本人的花费
+					spent[string(input.TxID)] = append(spent[string(input.TxID)], int64(index))
+				}
+			}
+		}
+		//遍历outputs
+		for _, tx := range block.Transactions {
+			u := UTXO{tx,[]int64{}}
+			for index, output := range tx.Outputs {//遍历每个普通交易的输入
+				if output.Unlock(address) && !IsIn(spent[string(tx.ID)],int64(index)){//属于我的且没有花费的output
+					u.indexes = append(u.indexes,int64(index))
+					utxo = append(utxo,u)
+				}
+			}
+		}
+	}
+	return utxo
 }

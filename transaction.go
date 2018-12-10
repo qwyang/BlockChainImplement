@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/gob"
+	"fmt"
 )
 
 const reward = 50
@@ -15,15 +16,44 @@ type Input struct {
 	UnlockScripts string
 }
 
+func (in *Input) String() string {
+	var buffer bytes.Buffer
+	_,err := fmt.Fprintf(&buffer,"{PreTxHash:%x,Index:%d,Scripts:%s}",in.TxID,in.Index,in.UnlockScripts)
+	CheckError("Input.String #1",err)
+	return string(buffer.Bytes())
+}
+
+func (in *Input) Unlock(unlockdata string) bool {
+	return in.UnlockScripts == unlockdata
+}
+
 type Output struct {
 	Value float64
 	LockScript string
+}
+
+func (out *Output) String() string {
+	var buffer bytes.Buffer
+	_,err := fmt.Fprintf(&buffer,"{Value:%x,Scripts:%s}",out.Value,out.LockScript)
+	CheckError("Output.String #1",err)
+	return string(buffer.Bytes())
+}
+
+func (out *Output) Unlock(unlockdata string) bool {
+	return out.LockScript == unlockdata
 }
 
 type Transaction struct {
 	ID []byte
 	Inputs []Input
 	Outputs []Output
+}
+
+func (tx *Transaction) String() string {
+	var buffer bytes.Buffer
+	_,err := fmt.Fprintf(&buffer,"{TxHash:%x,Inputs:%v,Outputs:%v}",tx.ID,tx.Inputs,tx.Outputs)
+	CheckError("Transaction.String #1",err)
+	return string(buffer.Bytes())
 }
 
 func (tx *Transaction) Serialize() []byte {
@@ -45,6 +75,7 @@ func NewCoinbaseTx(toAddress string,data string) *Transaction {
 	}
 	g_output := Output{
 		Value:reward,
+		LockScript:toAddress,
 	}
 	tx := Transaction{
 		[]byte{},
@@ -52,7 +83,12 @@ func NewCoinbaseTx(toAddress string,data string) *Transaction {
 		[]Output{g_output},
 	}
 	tx.SetId()
+	//fmt.Printf("transx:%v\n",tx)
 	return &tx
+}
+
+func (tx *Transaction) IsCoinbase() bool {
+	return len(tx.Inputs) == 1 && tx.Inputs[0].TxID == nil
 }
 
 func NewTransaction(fromAddress string,toAddress string, value float64) *Transaction{

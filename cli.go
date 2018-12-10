@@ -10,7 +10,7 @@ import (
 
 func PrintBlock(block *Block){
 	fmt.Printf("Hash:0x%x\n", block.Hash)
-	fmt.Printf("Transactions: %v\n", block.Transactions)
+	fmt.Printf("Transactions: %s\n", block.Transactions)
 	fmt.Printf("version:%d\n", block.Version)
 	fmt.Printf("PrevBlockHash:0x%x\n", block.PrevBlockHash)
 	fmt.Printf("TimeStamp:%d\n", block.TimeStamp)
@@ -31,7 +31,7 @@ func (cli *CLI) usage()string{
 	var buffer bytes.Buffer
 	_,err := fmt.Fprintf(&buffer,"Usage:\n")
 	CheckError("CLI.usage #0",err)
-	_,err = fmt.Fprintf(&buffer,"%s newchaine\n",os.Args[0])
+	_,err = fmt.Fprintf(&buffer,"%s newchain\n",os.Args[0])
 	CheckError("CLI.usage #1",err)
 	_,err = fmt.Fprintf(&buffer,"%s addblock\n",os.Args[0])
 	CheckError("CLI.usage #2",err)
@@ -41,12 +41,12 @@ func (cli *CLI) usage()string{
 }
 
 func (cli *CLI) AddBlock(){
-	bc := NewBlockChain()
+	bc := GetBlockChainHandler()
 	bc.AddBlock(nil)
 }
 
 func (cli *CLI) ListBlock() {
-	bc := NewBlockChain()
+	bc := GetBlockChainHandler()
 	iter := bc.Iterator()
 	var i int = 1
 	for b := iter.Next();b != nil;b = iter.Next() {
@@ -56,8 +56,21 @@ func (cli *CLI) ListBlock() {
 	}
 }
 
-func (cli *CLI) NewChain(){
+func checkDatabaseExist()bool{
+	_,err := os.Stat(DataBaseFile)
+	if os.IsNotExist(err){
+		return false
+	}
+	return true
+}
+
+
+func (cli *CLI) NewChain(address string){
 	var lastHash []byte
+	if checkDatabaseExist() {
+		fmt.Printf("BlockChain Already Exist.\n")
+		return
+	}
 	db,err := bolt.Open(DataBaseFile,0600,nil)
 	CheckError("CLI.NewChain #1",err)
 	defer db.Close()
@@ -66,8 +79,10 @@ func (cli *CLI) NewChain(){
 		if bucket != nil{
 			lastHash = bucket.Get([]byte(lastHashKey))
 		} else {
-			transx := NewCoinbaseTx("",GenesisBlockInfo)
+			transx := NewCoinbaseTx(address,GenesisBlockInfo)
+			//fmt.Printf("transx:%v\n",transx)
 			block := NewGenesisBlock(transx)
+			//fmt.Printf("%v\n",block)
 			bucket, err = tx.CreateBucket([]byte(bucketName))
 			if err != nil {
 				return err
@@ -87,10 +102,22 @@ func (cli *CLI) NewChain(){
 	CheckError("CLI.NewChain #1",err)
 }
 
+func (cli *CLI) GetUTXO (address string){
+	bc := GetBlockChainHandler()
+	fmt.Printf("------------------%s utxo-----------------------\n",address)
+	for _,u := range bc.GetUTXOs(address){
+		fmt.Printf("transaction:%s,unused outputs:%v\n",u.tx,u.indexes)
+	}
+}
+
+
 func (cli *CLI) run() {
 	cmdCreateChain := flag.NewFlagSet("newchain",flag.ExitOnError)
 	cmdAdd := flag.NewFlagSet("addblock",flag.ExitOnError)
 	cmdList := flag.NewFlagSet("listblock",flag.ExitOnError)
+	cmdGetUTXO := flag.NewFlagSet("getutxo",flag.ExitOnError)
+	cmdCreateChainAddress := cmdCreateChain.String("address","","Address Of Receiver")
+	cmdGetUTXOAddress := cmdGetUTXO.String("address","","Get UTXO by Address")
 	if len(os.Args) < 2 {
 		fmt.Printf("%s\n",cli.usage())
 		os.Exit(-1)
@@ -100,7 +127,7 @@ func (cli *CLI) run() {
 		err := cmdCreateChain.Parse(os.Args[2:])
 		CheckError("CLI.run #1",err)
 		if cmdCreateChain.Parsed(){
-			cli.NewChain()
+			cli.NewChain(*cmdCreateChainAddress)
 		}
 	case "addblock":
 		err := cmdAdd.Parse(os.Args[2:])
@@ -113,6 +140,14 @@ func (cli *CLI) run() {
 		CheckError("CLI.run #1",err)
 		if cmdList.Parsed(){
 			cli.ListBlock()
+		}
+	case "getutxo":
+		err := cmdGetUTXO.Parse(os.Args[2:])
+		CheckError("CLI.run #1",err)
+		if cmdGetUTXO.Parsed(){
+			if *cmdGetUTXOAddress != ""{
+				cli.GetUTXO(*cmdGetUTXOAddress)
+			}
 		}
 	default:
 		fmt.Printf("%s\n",cli.usage())

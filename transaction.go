@@ -10,39 +10,6 @@ import (
 const reward = 50
 const GenesisBlockInfo = "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks"
 
-type Input struct {
-	TxID []byte
-	Index int64
-	UnlockScripts string
-}
-
-func (in *Input) String() string {
-	var buffer bytes.Buffer
-	_,err := fmt.Fprintf(&buffer,"{PreTxHash:%x,Index:%d,Scripts:%s}",in.TxID,in.Index,in.UnlockScripts)
-	CheckError("Input.String #1",err)
-	return string(buffer.Bytes())
-}
-
-func (in *Input) Unlock(unlockdata string) bool {
-	return in.UnlockScripts == unlockdata
-}
-
-type Output struct {
-	Value float64
-	LockScript string
-}
-
-func (out *Output) String() string {
-	var buffer bytes.Buffer
-	_,err := fmt.Fprintf(&buffer,"{Value:%x,Scripts:%s}",out.Value,out.LockScript)
-	CheckError("Output.String #1",err)
-	return string(buffer.Bytes())
-}
-
-func (out *Output) Unlock(unlockdata string) bool {
-	return out.LockScript == unlockdata
-}
-
 type Transaction struct {
 	ID []byte
 	Inputs []Input

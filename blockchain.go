@@ -169,3 +169,21 @@ func (bc *BlockChain)GetUTXOs(address string) []UTXO{
 	}
 	return utxo
 }
+
+func (bc *BlockChain)GetSuitableUTXOs(address string, amount float64) (float64,map[string][]int64) {
+	m := make(map[string][]int64)
+	var money float64 = 0.0
+	utxos := bc.GetUTXOs(address)
+	for _,u := range utxos {
+		for _,i := range u.indexes{
+			money += u.tx.Outputs[i].Value
+			if money < amount {
+				m[string(u.tx.ID)] = append(m[string(u.tx.ID)],i)
+			}else {
+				goto EXIT
+			}
+		}
+	}
+	EXIT:
+	return money,m
+}

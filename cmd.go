@@ -23,7 +23,9 @@ func (cli *CLI) NewTransaction(from,to string,amount float64){
 	bc := GetBlockChainHandler()
 	defer bc.db.Close()
 	tx := NewTransaction(from,to,amount,bc)
-	bc.SaveTx(tx,NewTransactionBucket)
+	if tx != nil {
+		bc.SaveTx(tx,NewTransactionBucket)
+	}
 }
 
 func (cli *CLI) Mine(address string){
@@ -71,7 +73,15 @@ func (cli *CLI) NewChain(address string){
 	CheckError("CLI.NewChain #1",err)
 	defer db.Close()
 	bc := &BlockChain{db,block.Hash}
-	bc.SaveTx(transx,NewTransactionBucket)
+	//bc.SaveTx(transx,NewTransactionBucket)
+	err = db.Update(func(tx *bolt.Tx)error{
+		_,err := tx.CreateBucketIfNotExists([]byte(NewTransactionBucket))
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	CheckError("CLI.NewChain #1",err)
 	bc.SaveBlock(block)
 }
 

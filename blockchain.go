@@ -133,12 +133,14 @@ func (bc *BlockChain)GetUTXOs(address string) []UTXO{
 	iter := bc.Iterator()
 	for block := iter.Next();block != nil;block = iter.Next() {
 		for _, tx := range block.Transactions {
-			if !tx.IsCoinbase() { //CoinBase交易没有inputs,不统计
+			if tx.IsCoinbase() { //CoinBase交易没有inputs,不统计
 				continue
 			}
 			for index, input := range tx.Inputs {//遍历每个普通交易的输入
+				//fmt.Printf("input:%v\n",input)
 				if input.Unlock(address) {//属于本人的花费
 					spent[string(input.TxID)] = append(spent[string(input.TxID)], int64(index))
+					//fmt.Printf("spent:%v\n",spent)
 				}
 			}
 		}
@@ -160,12 +162,13 @@ func (bc *BlockChain)GetSuitableUTXOs(address string, amount float64) (float64,m
 	m := make(map[string][]int64)
 	var money float64 = 0.0
 	utxos := bc.GetUTXOs(address)
+	//fmt.Printf("%s,%v\n","GetSuitableUTXOs",utxos)
 	for _,u := range utxos {
 		for _,i := range u.indexes{
 			money += u.tx.Outputs[i].Value
-			if money < amount {
-				m[string(u.tx.ID)] = append(m[string(u.tx.ID)],i)
-			}else {
+			m[string(u.tx.ID)] = append(m[string(u.tx.ID)],i)
+			//fmt.Printf("%v\n",m)
+			if money >= amount {
 				goto EXIT
 			}
 		}
@@ -206,6 +209,10 @@ func (bc *BlockChain) RemoveNewTx(hash []byte) {
 	err := bc.db.Update(func(tx *bolt.Tx) error {
 		var bucket *bolt.Bucket
 		var err error
+		bucket,err = tx.CreateBucketIfNotExists([]byte(NewTransactionBucket))
+		if err != nil {
+			return err
+		}
 		err = bucket.Delete(hash)
 		if err != nil {
 			return err

@@ -56,6 +56,7 @@ func (tx *Transaction) IsCoinbase() bool {
 
 func NewTransaction(fromAddress string,toAddress string, amount float64, bc *BlockChain) *Transaction{
 	total,m := bc.GetSuitableUTXOs(fromAddress,amount)
+	//fmt.Printf("NewTransaction SuitableUTXOS:%f,%v",total,m)
 	if total < amount {
 		return nil
 	}
@@ -63,7 +64,7 @@ func NewTransaction(fromAddress string,toAddress string, amount float64, bc *Blo
 	outputs := []Output{}
 	for hash,indexes := range m {
 		for _,index := range indexes{
-			input := Input {[]byte(hash),index,toAddress}
+			input := Input {[]byte(hash),index,fromAddress}
 			inputs = append(inputs,input)
 		}
 	}

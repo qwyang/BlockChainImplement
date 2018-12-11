@@ -6,6 +6,14 @@ import (
 	"github.com/boltdb/bolt"
 )
 
+package main
+
+import (
+"bytes"
+"errors"
+"github.com/boltdb/bolt"
+)
+
 const (
 	DataBaseFile = "blockchain.db"
 	lastHashKey = "LastHashKey"
@@ -184,6 +192,6 @@ func (bc *BlockChain)GetSuitableUTXOs(address string, amount float64) (float64,m
 			}
 		}
 	}
-	EXIT:
+EXIT:
 	return money,m
 }

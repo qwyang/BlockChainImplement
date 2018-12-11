@@ -6,18 +6,11 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-package main
-
-import (
-"bytes"
-"errors"
-"github.com/boltdb/bolt"
-)
-
 const (
-	DataBaseFile = "blockchain.db"
-	lastHashKey = "LastHashKey"
-	bucketName = "blockchainBucket"
+	DataBaseFile         = "blockchain.db"
+	lastHashKey          = "LastHashKey"
+	BlockBucketName      = "blockchainBucket"
+	NewTransactionBucket = "NewTransactionBucket"
 )
 
 type BlockChain struct {
@@ -40,13 +33,13 @@ func NewBlockChain() *BlockChain {
 	db,err := bolt.Open(DataBaseFile,0600,nil)
 	CheckError("NewBlockChain #1",err)
 	err = db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(bucketName))
+		bucket := tx.Bucket([]byte(BlockBucketName))
 		if bucket != nil{
 			lastHash = bucket.Get([]byte(lastHashKey))
 		} else {
 			transx := NewCoinbaseTx("",GenesisBlockInfo)
 			block := NewGenesisBlock(transx)
-			bucket, err = tx.CreateBucket([]byte(bucketName))
+			bucket, err = tx.CreateBucket([]byte(BlockBucketName))
 			if err != nil {
 				return err
 			}
@@ -71,7 +64,7 @@ func GetBlockChainHandler() *BlockChain {
 	db,err := bolt.Open(DataBaseFile,0600,nil)
 	CheckError("GetBlockChainHandler #1",err)
 	err = db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(bucketName))
+		bucket := tx.Bucket([]byte(BlockBucketName))
 		if bucket == nil {
 			err := errors.New("Empty Database" )
 			CheckError("GetBlockChainHandler #2",err)
@@ -90,7 +83,7 @@ func GetBlockChainHandler() *BlockChain {
 func (bc *BlockChain) AddBlock(txs []*Transaction) {
 	block := NewBlock(txs,bc.lastHash)
 	err := bc.db.Update(func(tx *bolt.Tx)error{
-		bucket := tx.Bucket([]byte(bucketName))
+		bucket := tx.Bucket([]byte(BlockBucketName))
 		if bucket != nil {
 			err := bucket.Put(block.Hash,block.Serialize())
 			if err != nil {
@@ -122,7 +115,7 @@ func (iter *BlockChainIterator) Next() *Block {
 		return nil
 	}
 	err:=iter.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(bucketName))
+		bucket := tx.Bucket([]byte(BlockBucketName))
 		data := bucket.Get([]byte(iter.currentHash))
 		if data == nil {
 			err := errors.New("cannot find hashkey in db:" + string(iter.currentHash))
@@ -194,4 +187,67 @@ func (bc *BlockChain)GetSuitableUTXOs(address string, amount float64) (float64,m
 	}
 EXIT:
 	return money,m
+}
+
+func (bc *BlockChain) GetBalance(address string) float64 {
+	var balance float64
+	uts := bc.GetUTXOs(address)
+	for _,u := range uts {
+		for _,i := range u.indexes {
+			balance += u.tx.Outputs[i].Value
+		}
+	}
+	return balance
+}
+
+func (bc *BlockChain) SaveTx(transx *Transaction,bucketname string){
+	err := bc.db.Update(func(tx *bolt.Tx) error {
+		var bucket *bolt.Bucket
+		var err error
+		bucket,err = tx.CreateBucketIfNotExists([]byte(bucketname))
+		if err != nil {
+			return err
+		}
+		err = bucket.Put(transx.ID,transx.Serialize())
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	CheckError("BlockChain.SaveTx",err)
+}
+
+func (bc *BlockChain) GetNewTxs(num int) []*Transaction {
+	var txs []*Transaction
+	err := bc.db.View(func(tx *bolt.Tx) error {
+			// Assume bucket exists and has keys
+			var i int = 0
+			b := tx.Bucket([]byte(NewTransactionBucket))
+			c := b.Cursor()
+			for k, v := c.First(); k != nil && i < num; k, v = c.Next() {
+				transx := DeserializeTx(v)
+				txs = append(txs,transx)
+				i++
+			}
+			return nil
+		})
+	CheckError("BlockChain.SaveTx",err)
+	return txs
+}
+
+func (bc *BlockChain) SaveBlock(block *Block){
+	err := bc.db.Update(func(tx *bolt.Tx) error {
+		var bucket *bolt.Bucket
+		var err error
+		bucket,err = tx.CreateBucketIfNotExists([]byte(BlockBucketName))
+		if err != nil {
+			return err
+		}
+		err = bucket.Put(block.Hash,block.Serialize())
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	CheckError("BlockChain.SaveTx",err)
 }

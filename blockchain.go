@@ -8,7 +8,7 @@ import (
 
 const (
 	DataBaseFile         = "blockchain.db"
-	lastHashKey          = "LastHashKey"
+	LastBlockHashKey     = "LastHashKey"
 	BlockBucketName      = "blockchainBucket"
 	NewTransactionBucket = "NewTransactionBucket"
 )
@@ -35,7 +35,7 @@ func NewBlockChain() *BlockChain {
 	err = db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(BlockBucketName))
 		if bucket != nil{
-			lastHash = bucket.Get([]byte(lastHashKey))
+			lastHash = bucket.Get([]byte(LastBlockHashKey))
 		} else {
 			transx := NewCoinbaseTx("",GenesisBlockInfo)
 			block := NewGenesisBlock(transx)
@@ -43,7 +43,7 @@ func NewBlockChain() *BlockChain {
 			if err != nil {
 				return err
 			}
-			err = bucket.Put([]byte(lastHashKey), block.Hash)
+			err = bucket.Put([]byte(LastBlockHashKey), block.Hash)
 			if err != nil {
 				return err
 			}
@@ -69,9 +69,9 @@ func GetBlockChainHandler() *BlockChain {
 			err := errors.New("Empty Database" )
 			CheckError("GetBlockChainHandler #2",err)
 		}
-		lastHash = bucket.Get([]byte(lastHashKey))
+		lastHash = bucket.Get([]byte(LastBlockHashKey))
 		if lastHash == nil {
-			err := errors.New("cannot find lasthashkey in db:" + string(lastHashKey))
+			err := errors.New("cannot find lasthashkey in db:" + string(LastBlockHashKey))
 			CheckError("GetBlockChainHandler #2",err)
 		}
 		return nil
@@ -82,25 +82,10 @@ func GetBlockChainHandler() *BlockChain {
 
 func (bc *BlockChain) AddBlock(txs []*Transaction) {
 	block := NewBlock(txs,bc.lastHash)
-	err := bc.db.Update(func(tx *bolt.Tx)error{
-		bucket := tx.Bucket([]byte(BlockBucketName))
-		if bucket != nil {
-			err := bucket.Put(block.Hash,block.Serialize())
-			if err != nil {
-				return err
-			}
-			err = bucket.Put([]byte(lastHashKey),block.Hash)
-			if err != nil {
-				return err
-			}
-			bc.lastHash = block.Hash
-		}else {
-			err := errors.New("Fatal:AddBlock can not find the \"%s\" bucket in DB")
-			CheckError("AddBlock #1",err)
-		}
-		return nil
-	})
-	CheckError("AddBlock #2",err)
+	bc.SaveBlock(block)
+	for _,tx := range block.Transactions {
+		bc.RemoveNewTx(tx.ID)
+	}
 }
 
 func (bc *BlockChain) Iterator() *BlockChainIterator{
@@ -217,6 +202,19 @@ func (bc *BlockChain) SaveTx(transx *Transaction,bucketname string){
 	CheckError("BlockChain.SaveTx",err)
 }
 
+func (bc *BlockChain) RemoveNewTx(hash []byte) {
+	err := bc.db.Update(func(tx *bolt.Tx) error {
+		var bucket *bolt.Bucket
+		var err error
+		err = bucket.Delete(hash)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	CheckError("BlockChain.RemoveNewTx",err)
+}
+
 func (bc *BlockChain) GetNewTxs(num int) []*Transaction {
 	var txs []*Transaction
 	err := bc.db.View(func(tx *bolt.Tx) error {
@@ -244,6 +242,10 @@ func (bc *BlockChain) SaveBlock(block *Block){
 			return err
 		}
 		err = bucket.Put(block.Hash,block.Serialize())
+		if err != nil {
+			return err
+		}
+		err = bucket.Put([]byte(LastBlockHashKey),block.Hash)
 		if err != nil {
 			return err
 		}

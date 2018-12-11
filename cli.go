@@ -17,7 +17,7 @@ func (cli *CLI) usage()string{
 	var buffer bytes.Buffer
 	_,err := fmt.Fprintf(&buffer,"Usage:\n")
 	CheckError("CLI.usage #0",err)
-	_,err = fmt.Fprintf(&buffer,"%s newchain\n",os.Args[0])
+	_,err = fmt.Fprintf(&buffer,"%s newchain --address ADDRESS\n",os.Args[0])
 	CheckError("CLI.usage #1",err)
 	_,err = fmt.Fprintf(&buffer,"%s addblock\n",os.Args[0])
 	CheckError("CLI.usage #2",err)
@@ -41,9 +41,9 @@ func (cli *CLI) run() {
 	cmdBalanceAddr := cmdBalance.String("address","","Address Of Receiver")
 	cmdCreateChainAddress := cmdCreateChain.String("address","","Address Of Receiver")
 	cmdGetUTXOAddress := cmdGetUTXO.String("address","","Get UTXO by Address")
-	cmdNewTxFrom := cmdGetUTXO.String("from","","From Address")
-	cmdNewTxTo := cmdGetUTXO.String("to","","To Address")
-	cmdNewTxAmount := cmdGetUTXO.Float64("amount",0.0,"Amount Money To Transfer")
+	cmdNewTxFrom := cmdNewTx.String("from","","From Address")
+	cmdNewTxTo := cmdNewTx.String("to","","To Address")
+	cmdNewTxAmount := cmdNewTx.Float64("amount",0.0,"Amount Money To Transfer")
 	if len(os.Args) < 2 {
 		fmt.Printf("%s\n",cli.usage())
 		os.Exit(-1)
@@ -53,7 +53,12 @@ func (cli *CLI) run() {
 		err := cmdCreateChain.Parse(os.Args[2:])
 		CheckError("CLI.run #1",err)
 		if cmdCreateChain.Parsed(){
-			cli.NewChain(*cmdCreateChainAddress)
+			if *cmdCreateChainAddress != ""{
+				cli.NewChain(*cmdCreateChainAddress)
+			}else{
+				fmt.Printf("%s\n",cli.usage())
+				os.Exit(-1)
+			}
 		}
 	case "newtx":
 		err := cmdNewTx.Parse(os.Args[2:])

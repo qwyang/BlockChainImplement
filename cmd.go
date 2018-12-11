@@ -30,8 +30,13 @@ func (cli *CLI) Mine(address string){
 	bc := GetBlockChainHandler()
 	defer bc.db.Close()
 	//get transactions
+	var totalTxs []*Transaction = []*Transaction{}
+	tx := NewCoinbaseTx(address,"CoinBase")
+	//bc.SaveTx(tx,NewTransactionBucket)
+	totalTxs = append(totalTxs,tx)
 	txs := bc.GetNewTxs(10)
-	bc.AddBlock(txs)
+	totalTxs = append(totalTxs,txs...)
+	bc.AddBlock(totalTxs)
 }
 
 func (cli *CLI) ListBlock() {
